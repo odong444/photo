@@ -45,11 +45,27 @@
                 </a>
             </div>
             
-            <div class="photo-grid">
+            <div class="photo-list">
                 {% for photo in photos %}
-                    <div class="photo-thumb {{ 'downloaded' if photo.is_downloaded else '' }}" 
-                         onclick="showPhoto({{ photo.id }}, '{{ photo.original_filename }}', {{ photo.is_downloaded|lower }})">
-                        <img src="" data-photo-id="{{ photo.id }}" alt="{{ photo.original_filename }}" loading="lazy">
+                    <div class="photo-item {{ 'downloaded' if photo.is_downloaded else '' }}" style="display: flex; align-items: center; padding: 12px; background: var(--gray-50); border-radius: 8px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <p style="font-weight: 500; margin-bottom: 4px;">{{ photo.original_filename }}</p>
+                            <p style="font-size: 0.75rem; color: var(--gray-500);">
+                                {{ photo.file_size_display }} · {{ photo.uploaded_at.strftime('%m/%d %H:%M') }}
+                                {% if photo.is_downloaded %}
+                                    <span style="color: var(--success);">✓ 다운로드됨</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="{{ url_for('admin_photo_download', photo_id=photo.id) }}" class="btn btn-primary btn-sm">
+                                📥
+                            </a>
+                            <form action="{{ url_for('admin_photo_delete', photo_id=photo.id) }}" method="POST" style="display: inline;"
+                                  onsubmit="return confirm('삭제하시겠습니까?');">
+                                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+                            </form>
+                        </div>
                     </div>
                 {% endfor %}
             </div>
@@ -61,81 +77,4 @@
         <p>아직 업로드된 사진이 없습니다.</p>
     </div>
 {% endif %}
-
-<!-- 사진 상세 모달 -->
-<div class="modal-backdrop" id="photoModal" style="display: none;" onclick="closeModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <img src="" id="modalImage" alt="">
-        <div style="padding: 16px; background: white;">
-            <p id="modalFilename" style="font-weight: 600; margin-bottom: 4px;"></p>
-            <p id="modalStatus" style="font-size: 0.875rem; color: var(--gray-500); margin-bottom: 16px;"></p>
-            <div style="display: flex; gap: 8px;">
-                <a href="" id="modalDownload" class="btn btn-primary btn-sm" style="flex: 1;">
-                    📥 다운로드
-                </a>
-                <form id="modalDeleteForm" method="POST" style="flex: 1;" 
-                      onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
-                    <button type="submit" class="btn btn-danger btn-sm btn-block">삭제</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// 썸네일 로드
-document.querySelectorAll('.photo-thumb img').forEach(img => {
-    const photoId = img.dataset.photoId;
-    fetch(`/admin/photo/${photoId}/preview`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.url) {
-                img.src = data.url;
-            }
-        });
-});
-
-function showPhoto(photoId, filename, isDownloaded) {
-    const modal = document.getElementById('photoModal');
-    const modalImg = document.getElementById('modalImage');
-    const modalFilename = document.getElementById('modalFilename');
-    const modalStatus = document.getElementById('modalStatus');
-    const modalDownload = document.getElementById('modalDownload');
-    const modalDeleteForm = document.getElementById('modalDeleteForm');
-    
-    // 이미지 로드
-    fetch(`/admin/photo/${photoId}/preview`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.url) {
-                modalImg.src = data.url;
-            }
-        });
-    
-    modalFilename.textContent = filename;
-    modalStatus.textContent = isDownloaded ? '✅ 다운로드됨' : '⏳ 미다운로드';
-    modalDownload.href = `/admin/photo/${photoId}/download`;
-    modalDeleteForm.action = `/admin/photo/${photoId}/delete`;
-    
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal(event) {
-    if (event.target.id === 'photoModal') {
-        document.getElementById('photoModal').style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
-
-// ESC 키로 모달 닫기
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        document.getElementById('photoModal').style.display = 'none';
-        document.body.style.overflow = '';
-    }
-});
-</script>
 {% endblock %}
