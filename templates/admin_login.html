@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}관리자 로그인{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 40px auto;">
+    <div class="card">
+        <h1 style="font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 24px;">
+            🔐 관리자 로그인
+        </h1>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">비밀번호</label>
+                <input type="password" name="password" class="form-input" 
+                       placeholder="비밀번호를 입력하세요" required autofocus>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+                로그인
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

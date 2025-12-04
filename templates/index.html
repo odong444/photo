@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}사진 업로드{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">프로젝트 선택</h1>
+    <p style="color: var(--gray-500);">사진을 업로드할 프로젝트를 선택해주세요</p>
+</div>
+
+{% if projects %}
+    {% for project in projects %}
+        <a href="{{ url_for('upload', project_id=project.id) }}" class="project-item">
+            <div class="project-info">
+                <h3>{{ project.name }}</h3>
+                {% if project.description %}
+                    <p>{{ project.description }}</p>
+                {% endif %}
+                <p style="margin-top: 4px; font-size: 0.75rem;">
+                    📷 {{ project.photo_count }}장 업로드됨
+                </p>
+            </div>
+            <span class="project-arrow">›</span>
+        </a>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="icon">📁</div>
+        <p>현재 활성화된 프로젝트가 없습니다.</p>
+    </div>
+{% endif %}
+{% endblock %}

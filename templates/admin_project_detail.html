@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - 사진 관리{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <a href="{{ url_for('admin_dashboard') }}" style="color: var(--gray-500); text-decoration: none; font-size: 0.875rem;">
+        ← 대시보드
+    </a>
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-top: 8px;">{{ project.name }}</h1>
+</div>
+
+<div class="stats">
+    <div class="stat-item">
+        <div class="stat-value">{{ project.photo_count }}</div>
+        <div class="stat-label">전체</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value" style="color: var(--success);">{{ project.downloaded_count }}</div>
+        <div class="stat-label">다운로드</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value" style="color: var(--warning);">{{ project.photo_count - project.downloaded_count }}</div>
+        <div class="stat-label">미다운로드</div>
+    </div>
+</div>
+
+{% if project.photos %}
+    <div style="margin-bottom: 16px;">
+        <a href="{{ url_for('admin_project_download_all', project_id=project.id) }}" class="btn btn-success btn-block">
+            📥 전체 다운로드 (ZIP)
+        </a>
+    </div>
+    
+    {% for uploader_name, photos in uploaders.items() %}
+        <div class="uploader-section">
+            <div class="uploader-header">
+                <div>
+                    <span class="uploader-name">👤 {{ uploader_name }}</span>
+                    <span class="uploader-count">{{ photos|length }}장</span>
+                </div>
+                <a href="{{ url_for('admin_uploader_download', project_id=project.id, uploader_name=uploader_name) }}" 
+                   class="btn btn-outline btn-sm">
+                    📥 다운로드
+                </a>
+            </div>
+            
+            <div class="photo-grid">
+                {% for photo in photos %}
+                    <div class="photo-thumb {{ 'downloaded' if photo.is_downloaded else '' }}" 
+                         onclick="showPhoto({{ photo.id }}, '{{ photo.original_filename }}', {{ photo.is_downloaded|lower }})">
+                        <img src="" data-photo-id="{{ photo.id }}" alt="{{ photo.original_filename }}" loading="lazy">
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="icon">📷</div>
+        <p>아직 업로드된 사진이 없습니다.</p>
+    </div>
+{% endif %}
+
+<!-- 사진 상세 모달 -->
+<div class="modal-backdrop" id="photoModal" style="display: none;" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <img src="" id="modalImage" alt="">
+        <div style="padding: 16px; background: white;">
+            <p id="modalFilename" style="font-weight: 600; margin-bottom: 4px;"></p>
+            <p id="modalStatus" style="font-size: 0.875rem; color: var(--gray-500); margin-bottom: 16px;"></p>
+            <div style="display: flex; gap: 8px;">
+                <a href="" id="modalDownload" class="btn btn-primary btn-sm" style="flex: 1;">
+                    📥 다운로드
+                </a>
+                <form id="modalDeleteForm" method="POST" style="flex: 1;" 
+                      onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
+                    <button type="submit" class="btn btn-danger btn-sm btn-block">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 썸네일 로드
+document.querySelectorAll('.photo-thumb img').forEach(img => {
+    const photoId = img.dataset.photoId;
+    fetch(`/admin/photo/${photoId}/preview`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.url) {
+                img.src = data.url;
+            }
+        });
+});
+
+function showPhoto(photoId, filename, isDownloaded) {
+    const modal = document.getElementById('photoModal');
+    const modalImg = document.getElementById('modalImage');
+    const modalFilename = document.getElementById('modalFilename');
+    const modalStatus = document.getElementById('modalStatus');
+    const modalDownload = document.getElementById('modalDownload');
+    const modalDeleteForm = document.getElementById('modalDeleteForm');
+    
+    // 이미지 로드
+    fetch(`/admin/photo/${photoId}/preview`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.url) {
+                modalImg.src = data.url;
+            }
+        });
+    
+    modalFilename.textContent = filename;
+    modalStatus.textContent = isDownloaded ? '✅ 다운로드됨' : '⏳ 미다운로드';
+    modalDownload.href = `/admin/photo/${photoId}/download`;
+    modalDeleteForm.action = `/admin/photo/${photoId}/delete`;
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(event) {
+    if (event.target.id === 'photoModal') {
+        document.getElementById('photoModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.getElementById('photoModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+});
+</script>
+{% endblock %}

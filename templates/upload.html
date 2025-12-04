@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - 사진 업로드{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <a href="{{ url_for('index') }}" style="color: var(--gray-500); text-decoration: none; font-size: 0.875rem;">
+        ← 프로젝트 목록
+    </a>
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-top: 8px;">{{ project.name }}</h1>
+    {% if project.description %}
+        <p style="color: var(--gray-500); margin-top: 4px;">{{ project.description }}</p>
+    {% endif %}
+</div>
+
+<form method="POST" enctype="multipart/form-data" id="uploadForm">
+    <div class="card">
+        <div class="form-group">
+            <label class="form-label">업로더 이름 *</label>
+            <input type="text" name="uploader_name" class="form-input" 
+                   placeholder="이름을 입력하세요" required
+                   id="uploaderName">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">사진 선택 *</label>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" name="photos" multiple accept="image/*" id="fileInput">
+                <div class="upload-icon">📷</div>
+                <p class="upload-text">
+                    <strong>터치하여 사진 선택</strong><br>
+                    <span style="font-size: 0.875rem;">또는 파일을 여기에 드래그</span>
+                </p>
+            </div>
+        </div>
+        
+        <div class="preview-list" id="previewList"></div>
+        
+        <div id="uploadProgress" style="display: none;">
+            <p style="text-align: center; color: var(--gray-500); margin-bottom: 8px;">
+                업로드 중... <span id="progressText">0%</span>
+            </p>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>
+        📤 업로드하기
+    </button>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const previewList = document.getElementById('previewList');
+const submitBtn = document.getElementById('submitBtn');
+const uploaderName = document.getElementById('uploaderName');
+const uploadForm = document.getElementById('uploadForm');
+const uploadProgress = document.getElementById('uploadProgress');
+
+let selectedFiles = [];
+
+// 클릭으로 파일 선택
+uploadArea.addEventListener('click', () => fileInput.click());
+
+// 드래그 앤 드롭
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+});
+
+// 파일 선택
+fileInput.addEventListener('change', () => {
+    handleFiles(fileInput.files);
+});
+
+function handleFiles(files) {
+    for (let file of files) {
+        if (file.type.startsWith('image/')) {
+            selectedFiles.push(file);
+        }
+    }
+    updatePreview();
+    updateSubmitButton();
+}
+
+function updatePreview() {
+    previewList.innerHTML = '';
+    
+    if (selectedFiles.length === 0) return;
+    
+    previewList.innerHTML = `
+        <p style="font-weight: 600; margin-bottom: 12px;">
+            선택된 사진 (${selectedFiles.length}장)
+        </p>
+    `;
+    
+    selectedFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const item = document.createElement('div');
+            item.className = 'preview-item';
+            item.innerHTML = `
+                <img src="${e.target.result}" alt="">
+                <span class="name">${file.name}</span>
+                <span class="remove" onclick="removeFile(${index})">✕</span>
+            `;
+            previewList.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    updatePreview();
+    updateSubmitButton();
+}
+
+function updateSubmitButton() {
+    const hasName = uploaderName.value.trim() !== '';
+    const hasFiles = selectedFiles.length > 0;
+    submitBtn.disabled = !(hasName && hasFiles);
+    
+    if (hasFiles) {
+        submitBtn.textContent = `📤 ${selectedFiles.length}장 업로드하기`;
+    } else {
+        submitBtn.textContent = '📤 업로드하기';
+    }
+}
+
+uploaderName.addEventListener('input', updateSubmitButton);
+
+// 폼 제출
+uploadForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    if (selectedFiles.length === 0) return;
+    
+    const formData = new FormData();
+    formData.append('uploader_name', uploaderName.value);
+    
+    selectedFiles.forEach(file => {
+        formData.append('photos', file);
+    });
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '업로드 중...';
+    uploadProgress.style.display = 'block';
+    
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = percent + '%';
+        }
+    });
+    
+    xhr.addEventListener('load', () => {
+        window.location.href = xhr.responseURL;
+    });
+    
+    xhr.addEventListener('error', () => {
+        alert('업로드 중 오류가 발생했습니다.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = `📤 ${selectedFiles.length}장 업로드하기`;
+        uploadProgress.style.display = 'none';
+    });
+    
+    xhr.open('POST', '');
+    xhr.send(formData);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}관리자 대시보드{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <h1 style="font-size: 1.5rem; font-weight: 700;">프로젝트 관리</h1>
+    <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">
+        + 새 프로젝트
+    </a>
+</div>
+
+{% if projects %}
+    {% for project in projects %}
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                    <h3 style="font-weight: 600; margin-bottom: 4px;">
+                        {{ project.name }}
+                        {% if project.is_active %}
+                            <span class="badge badge-success">활성</span>
+                        {% else %}
+                            <span class="badge badge-gray">비활성</span>
+                        {% endif %}
+                    </h3>
+                    {% if project.description %}
+                        <p style="color: var(--gray-500); font-size: 0.875rem;">{{ project.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 12px;">
+                <div class="stat-item" style="padding: 12px;">
+                    <div class="stat-value" style="font-size: 1.25rem;">{{ project.photo_count }}</div>
+                    <div class="stat-label">전체 사진</div>
+                </div>
+                <div class="stat-item" style="padding: 12px;">
+                    <div class="stat-value" style="font-size: 1.25rem; color: var(--success);">{{ project.downloaded_count }}</div>
+                    <div class="stat-label">다운로드됨</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="{{ url_for('admin_project_detail', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                    📷 사진 보기
+                </a>
+                <a href="{{ url_for('admin_project_edit', project_id=project.id) }}" class="btn btn-outline btn-sm">
+                    수정
+                </a>
+                <form action="{{ url_for('admin_project_delete', project_id=project.id) }}" method="POST" style="display: inline;"
+                      onsubmit="return confirm('정말 삭제하시겠습니까? 모든 사진이 삭제됩니다.');">
+                    <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="icon">📁</div>
+        <p>등록된 프로젝트가 없습니다.</p>
+        <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary" style="margin-top: 16px;">
+            + 첫 프로젝트 만들기
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
