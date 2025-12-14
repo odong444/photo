@@ -9,10 +9,58 @@ import uuid
 import io
 import zipfile
 import re
+import gspread
+from google.oauth2.service_account import Credentials
+import json
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+GOOGLE_SHEETS_ID = '1eAuotbbl7bbj8N8rCr4lbgE-g9Ja_l66ZUk_N9UVtEI'
+
+def get_sheets_client():
+    """Google Sheets 클라이언트 생성"""
+    try:
+        creds_json = os.environ.get('GOOGLE_CREDENTIALS')
+        if not creds_json:
+            print("GOOGLE_CREDENTIALS 환경변수가 없습니다")
+            return None
+        
+        creds_dict = json.loads(creds_json)
+        scopes = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ]
+        credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        client = gspread.authorize(credentials)
+        return client
+    except Exception as e:
+        print(f"Google Sheets 연결 오류: {e}")
+        return None
+
+def save_reviews_to_sheets(uploader_name, project_name, reviews):
+    """리뷰 텍스트를 Google Sheets에 저장"""
+    try:
+        client = get_sheets_client()
+        if not client:
+            return False, "Google Sheets 연결 실패"
+        
+        spreadsheet = client.open_by_key(GOOGLE_SHEETS_ID)
+        worksheet = spreadsheet.sheet1
+        
+        rows_to_add = []
+        for review in reviews:
+            if review.strip():
+                rows_to_add.append([uploader_name, project_name, review.strip()])
+        
+        if rows_to_add:
+            worksheet.append_rows(rows_to_add)
+        
+        return True, f"{len(rows_to_add)}건 저장 완료"
+    except Exception as e:
+        print(f"Sheets 저장 오류: {e}")
+        return False, str(e)
 
 # S3 클라이언트
 def get_s3_client():
@@ -381,3 +429,45 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+@app.route('/upload/<int:project_id>/text', methods=['GET', 'POST'])
+def upload_text(project_id):
+    """텍스트(리뷰) 제출 페이지"""
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'POST':
+        uploader_name = request.form.get('uploader_name', '').strip()
+        
+        if not uploader_name:
+            flash('업로더 이름을 입력해주세요.')
+            return redirect(url_for('upload_text', project_id=project_id))
+        
+        reviews = []
+        for i in range(1, 6):
+            review = request.form.get(f'review_{i}', '').strip()
+            if review:
+                reviews.append(review)
+        
+        if not reviews:
+            flash('최소 1개 이상의 리뷰를 입력해주세요.')
+            return redirect(url_for('upload_text', project_id=project_id))
+        
+        success, message = save_reviews_to_sheets(uploader_name, project.name, reviews)
+        
+        if success:
+            flash(f'리뷰 {message}')
+            return redirect(url_for('upload_text_complete', project_id=project_id, count=len(reviews)))
+        else:
+            flash(f'저장 실패: {message}')
+            return redirect(url_for('upload_text', project_id=project_id))
+    
+    return render_template('upload_text.html', project=project)
+
+
+@app.route('/upload/<int:project_id>/text/complete')
+def upload_text_complete(project_id):
+    """텍스트 제출 완료 페이지"""
+    project = Project.query.get_or_404(project_id)
+    count = request.args.get('count', 0, type=int)
+    return render_template('upload_text_complete.html', project=project, count=count)
