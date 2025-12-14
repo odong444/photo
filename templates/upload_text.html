@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - 리뷰 작성{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <a href="{{ url_for('index') }}" style="color: var(--gray-500); text-decoration: none; font-size: 0.875rem;">
+        ← 프로젝트 목록
+    </a>
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-top: 8px;">{{ project.name }} - 리뷰 작성</h1>
+    {% if project.description %}
+        <p style="color: var(--gray-500); margin-top: 4px;">{{ project.description }}</p>
+    {% endif %}
+</div>
+
+<form method="POST" id="reviewForm">
+    <div class="card">
+        <div class="form-group">
+            <label class="form-label">업로더 이름 *</label>
+            <input type="text" name="uploader_name" class="form-input" 
+                   placeholder="이름을 입력하세요" required id="uploaderName">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">리뷰 작성 (최대 5건, 각 50~300자)</label>
+            
+            {% for i in range(1, 6) %}
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 0.875rem; color: var(--gray-600); margin-bottom: 4px; display: block;">
+                    리뷰 {{ i }}
+                </label>
+                <textarea name="review_{{ i }}" 
+                          class="form-input review-textarea" 
+                          placeholder="리뷰 내용을 입력하세요 (50~300자)"
+                          rows="3"
+                          minlength="50"
+                          maxlength="300"
+                          style="resize: vertical;"></textarea>
+                <div class="char-count" id="count_{{ i }}" style="font-size: 0.75rem; color: var(--gray-500); text-align: right; margin-top: 4px;">
+                    0 / 300자
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+            리뷰 제출하기
+        </button>
+    </div>
+</form>
+
+<div style="margin-top: 16px; text-align: center;">
+    <a href="{{ url_for('upload', project_id=project.id) }}" style="color: var(--primary); text-decoration: none; font-size: 0.875rem;">
+        📷 사진 업로드 페이지로 이동
+    </a>
+</div>
+
+<style>
+.review-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.review-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.char-count.warning {
+    color: var(--warning) !important;
+}
+
+.char-count.error {
+    color: var(--danger) !important;
+}
+
+.char-count.success {
+    color: var(--success) !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 글자 수 카운트
+    const textareas = document.querySelectorAll('.review-textarea');
+    
+    textareas.forEach((textarea, index) => {
+        const countEl = document.getElementById('count_' + (index + 1));
+        
+        textarea.addEventListener('input', function() {
+            const len = this.value.length;
+            countEl.textContent = len + ' / 300자';
+            
+            // 색상 변경
+            countEl.classList.remove('warning', 'error', 'success');
+            if (len > 0 && len < 50) {
+                countEl.classList.add('warning');
+                countEl.textContent = len + ' / 300자 (최소 50자)';
+            } else if (len > 300) {
+                countEl.classList.add('error');
+            } else if (len >= 50 && len <= 300) {
+                countEl.classList.add('success');
+            }
+        });
+    });
+    
+    // 폼 제출 전 검증
+    document.getElementById('reviewForm').addEventListener('submit', function(e) {
+        const textareas = document.querySelectorAll('.review-textarea');
+        let hasValidReview = false;
+        let hasError = false;
+        
+        textareas.forEach((textarea) => {
+            const len = textarea.value.trim().length;
+            if (len > 0) {
+                if (len < 50) {
+                    hasError = true;
+                    textarea.style.borderColor = 'var(--danger)';
+                } else if (len > 300) {
+                    hasError = true;
+                    textarea.style.borderColor = 'var(--danger)';
+                } else {
+                    hasValidReview = true;
+                    textarea.style.borderColor = 'var(--success)';
+                }
+            }
+        });
+        
+        if (!hasValidReview) {
+            e.preventDefault();
+            alert('최소 1개 이상의 리뷰를 입력해주세요. (50~300자)');
+            return;
+        }
+        
+        if (hasError) {
+            e.preventDefault();
+            alert('리뷰는 50자 이상 300자 이하로 작성해주세요.');
+            return;
+        }
+        
+        // 제출 버튼 비활성화
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = '제출 중...';
+    });
+});
+</script>
+{% endblock %}
