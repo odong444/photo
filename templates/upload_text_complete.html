@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}리뷰 제출 완료{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 40px 20px;">
+    <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">리뷰 제출 완료!</h1>
+    <p style="color: var(--gray-500); margin-bottom: 24px;">
+        {{ count }}건의 리뷰가 성공적으로 저장되었습니다.
+    </p>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        <a href="{{ url_for('upload_text', project_id=project.id) }}" class="btn btn-primary">
+            추가 리뷰 작성하기
+        </a>
+        <a href="{{ url_for('upload', project_id=project.id) }}" class="btn btn-secondary">
+            📷 사진 업로드하기
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            프로젝트 목록으로
+        </a>
+    </div>
+</div>
+{% endblock %}
