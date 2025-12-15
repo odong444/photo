@@ -134,9 +134,8 @@ def upload(project_id):
                         
                         # DB 저장
                         photo = Photo(
-                            filename=unique_filename,
+                            filename=s3_key,  # ← s3_key 값을 filename에 저장
                             original_filename=file.filename,
-                            s3_key=s3_key,
                             file_size=file.content_length or 0,
                             uploader_name=uploader_name,
                             project_id=project.id
