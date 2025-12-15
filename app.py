@@ -150,7 +150,7 @@ def upload(project_id):
         reviews = []
         for i in range(1, 6):
             review = request.form.get(f'review_{i}', '').strip()
-            if review and len(review) >= 50:  # 50자 이상만 저장
+            if review:  # 50자 이상만 저장
                 reviews.append(review)
         
         if reviews:
