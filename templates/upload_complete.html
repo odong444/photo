@@ -3,20 +3,27 @@
 {% block title %}업로드 완료{% endblock %}
 
 {% block content %}
-<div class="card" style="text-align: center; padding: 60px 20px;">
-    <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
-    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">
-        업로드 완료!
-    </h1>
-    <p style="color: var(--gray-500); margin-bottom: 24px;">
-        {{ count }}장의 사진이 성공적으로 업로드되었습니다.
-    </p>
+<div class="card" style="text-align: center; padding: 40px 20px;">
+    <div style="font-size: 4rem; margin-bottom: 16px;">🎉</div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">업로드 완료!</h1>
+    
+    <div style="color: var(--gray-600); margin-bottom: 24px;">
+        {% if photo_count > 0 %}
+            <p>📷 사진 {{ photo_count }}장 업로드 완료</p>
+        {% endif %}
+        {% if review_count > 0 %}
+            <p>✏️ 리뷰 {{ review_count }}건 저장 완료</p>
+        {% endif %}
+        {% if photo_count == 0 and review_count == 0 %}
+            <p>업로드가 완료되었습니다.</p>
+        {% endif %}
+    </div>
     
     <div style="display: flex; flex-direction: column; gap: 12px;">
         <a href="{{ url_for('upload', project_id=project.id) }}" class="btn btn-primary">
             추가 업로드하기
         </a>
-        <a href="{{ url_for('index') }}" class="btn btn-outline">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
             프로젝트 목록으로
         </a>
     </div>
