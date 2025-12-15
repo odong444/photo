@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ project.name }} - 사진 업로드{% endblock %}
+{% block title %}{{ project.name }} - 업로드{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 24px;">
@@ -18,77 +18,275 @@
         <div class="form-group">
             <label class="form-label">업로더 이름 *</label>
             <input type="text" name="uploader_name" class="form-input" 
-                   placeholder="이름을 입력하세요" required
-                   id="uploaderName">
+                   placeholder="이름을 입력하세요" required id="uploaderName">
         </div>
         
+        <!-- 사진 업로드 섹션 -->
         <div class="form-group">
-            <label class="form-label">사진 선택 *</label>
+            <label class="form-label">사진 선택</label>
             <div class="upload-area" id="uploadArea">
-                <input type="file" name="photos" multiple accept="image/*" id="fileInput" required>
                 <div class="upload-icon">📷</div>
-                <p class="upload-text">
-                    <strong>터치하여 사진 선택</strong><br>
-                    <span style="font-size: 0.875rem;">JPG, PNG, GIF 지원</span>
-                </p>
+                <p class="upload-text">터치하여 사진 선택</p>
+                <p class="upload-hint">JPG, PNG, GIF 지원</p>
+                <input type="file" name="photos" id="photoInput" 
+                       accept="image/*" multiple hidden>
             </div>
-            <p id="fileCount" style="margin-top: 8px; color: var(--gray-500); font-size: 0.875rem;"></p>
+            <div id="previewContainer" class="preview-container"></div>
         </div>
+        
+        <!-- 리뷰 텍스트 입력 섹션 -->
+        <div class="form-group" style="margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <label class="form-label">리뷰 작성 (선택, 최대 5건)</label>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 12px;">각 50~300자, 빈 칸은 무시됩니다</p>
+            
+            <div style="margin-bottom: 12px;">
+                <textarea name="review_1" class="review-textarea" placeholder="리뷰 1 (50~300자)" rows="2" maxlength="300"></textarea>
+                <div class="char-count" id="count_1">0 / 300</div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <textarea name="review_2" class="review-textarea" placeholder="리뷰 2 (50~300자)" rows="2" maxlength="300"></textarea>
+                <div class="char-count" id="count_2">0 / 300</div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <textarea name="review_3" class="review-textarea" placeholder="리뷰 3 (50~300자)" rows="2" maxlength="300"></textarea>
+                <div class="char-count" id="count_3">0 / 300</div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <textarea name="review_4" class="review-textarea" placeholder="리뷰 4 (50~300자)" rows="2" maxlength="300"></textarea>
+                <div class="char-count" id="count_4">0 / 300</div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <textarea name="review_5" class="review-textarea" placeholder="리뷰 5 (50~300자)" rows="2" maxlength="300"></textarea>
+                <div class="char-count" id="count_5">0 / 300</div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+            📤 업로드하기
+        </button>
     </div>
-    
-    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
-        📤 업로드하기
-    </button>
 </form>
-{% endblock %}
 
-{% block extra_js %}
+<style>
+.upload-area {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f9fafb;
+}
+
+.upload-area:hover, .upload-area.dragover {
+    border-color: var(--primary);
+    background: #f0f0ff;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    margin-bottom: 8px;
+}
+
+.upload-text {
+    color: var(--primary);
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.upload-hint {
+    color: #9ca3af;
+    font-size: 0.75rem;
+}
+
+.preview-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.review-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.char-count {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-align: right;
+    margin-top: 2px;
+}
+
+.char-count.warning { color: #f59e0b; }
+.char-count.error { color: #ef4444; }
+.char-count.success { color: #10b981; }
+</style>
+
 <script>
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-const fileCount = document.getElementById('fileCount');
-const submitBtn = document.getElementById('submitBtn');
-
-// 클릭으로 파일 선택
-uploadArea.addEventListener('click', (e) => {
-    if (e.target !== fileInput) {
-        fileInput.click();
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const photoInput = document.getElementById('photoInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const form = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let selectedFiles = [];
+    
+    // 업로드 영역 클릭
+    uploadArea.addEventListener('click', () => photoInput.click());
+    
+    // 드래그 앤 드롭
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    // 파일 선택
+    photoInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    function handleFiles(files) {
+        for (let file of files) {
+            if (file.type.startsWith('image/')) {
+                selectedFiles.push(file);
+                addPreview(file, selectedFiles.length - 1);
+            }
+        }
+        updateInput();
     }
-});
-
-// 파일 선택 시 개수 표시
-fileInput.addEventListener('change', () => {
-    const count = fileInput.files.length;
-    if (count > 0) {
-        fileCount.textContent = `${count}개 파일 선택됨`;
-        submitBtn.textContent = `📤 ${count}장 업로드하기`;
-    } else {
-        fileCount.textContent = '';
-        submitBtn.textContent = '📤 업로드하기';
+    
+    function addPreview(file, index) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.dataset.index = index;
+            div.innerHTML = `
+                <img src="${e.target.result}" alt="preview">
+                <button type="button" class="remove-btn" onclick="removeFile(${index})">×</button>
+            `;
+            previewContainer.appendChild(div);
+        };
+        reader.readAsDataURL(file);
     }
-});
-
-// 드래그 앤 드롭
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    fileInput.files = e.dataTransfer.files;
-    fileInput.dispatchEvent(new Event('change'));
-});
-
-// 폼 제출 시 버튼 비활성화
-document.getElementById('uploadForm').addEventListener('submit', () => {
-    submitBtn.disabled = true;
-    submitBtn.textContent = '업로드 중...';
+    
+    window.removeFile = function(index) {
+        selectedFiles[index] = null;
+        const item = previewContainer.querySelector(`[data-index="${index}"]`);
+        if (item) item.remove();
+        updateInput();
+    };
+    
+    function updateInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => {
+            if (file) dt.items.add(file);
+        });
+        photoInput.files = dt.files;
+    }
+    
+    // 글자 수 카운트
+    for (let i = 1; i <= 5; i++) {
+        const textarea = document.querySelector(`textarea[name="review_${i}"]`);
+        const countEl = document.getElementById(`count_${i}`);
+        
+        textarea.addEventListener('input', function() {
+            const len = this.value.length;
+            countEl.textContent = len + ' / 300';
+            
+            countEl.classList.remove('warning', 'error', 'success');
+            if (len > 0 && len < 50) {
+                countEl.classList.add('warning');
+            } else if (len > 300) {
+                countEl.classList.add('error');
+            } else if (len >= 50) {
+                countEl.classList.add('success');
+            }
+        });
+    }
+    
+    // 폼 제출
+    form.addEventListener('submit', function(e) {
+        // 리뷰 검증 (50자 미만인 리뷰가 있으면 경고)
+        let hasShortReview = false;
+        for (let i = 1; i <= 5; i++) {
+            const textarea = document.querySelector(`textarea[name="review_${i}"]`);
+            const len = textarea.value.trim().length;
+            if (len > 0 && len < 50) {
+                hasShortReview = true;
+                textarea.style.borderColor = '#ef4444';
+            } else {
+                textarea.style.borderColor = '#d1d5db';
+            }
+        }
+        
+        if (hasShortReview) {
+            e.preventDefault();
+            alert('리뷰는 50자 이상 작성해주세요.');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = '업로드 중...';
+    });
 });
 </script>
 {% endblock %}
