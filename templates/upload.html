@@ -40,28 +40,28 @@
             <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 12px;">각 50~300자, 빈 칸은 무시됩니다</p>
             
             <div style="margin-bottom: 12px;">
-                <textarea name="review_1" class="review-textarea" placeholder="리뷰 1 (50~300자)" rows="2" maxlength="300"></textarea>
-                <div class="char-count" id="count_1">0 / 300</div>
+                <textarea name="review_1" class="review-textarea" placeholder="리뷰 1 (0~500자)" rows="2" maxlength="500"></textarea>
+                <div class="char-count" id="count_1">0 / 500</div>
             </div>
             
             <div style="margin-bottom: 12px;">
-                <textarea name="review_2" class="review-textarea" placeholder="리뷰 2 (50~300자)" rows="2" maxlength="300"></textarea>
-                <div class="char-count" id="count_2">0 / 300</div>
+                <textarea name="review_2" class="review-textarea" placeholder="리뷰 2 (0~500자)" rows="2" maxlength="500"></textarea>
+                <div class="char-count" id="count_2">0 / 500</div>
             </div>
             
             <div style="margin-bottom: 12px;">
-                <textarea name="review_3" class="review-textarea" placeholder="리뷰 3 (50~300자)" rows="2" maxlength="300"></textarea>
-                <div class="char-count" id="count_3">0 / 300</div>
+                <textarea name="review_3" class="review-textarea" placeholder="리뷰 3 (0~500자)" rows="2" maxlength="500"></textarea>
+                <div class="char-count" id="count_3">0 / 500</div>
             </div>
             
             <div style="margin-bottom: 12px;">
-                <textarea name="review_4" class="review-textarea" placeholder="리뷰 4 (50~300자)" rows="2" maxlength="300"></textarea>
-                <div class="char-count" id="count_4">0 / 300</div>
+                <textarea name="review_4" class="review-textarea" placeholder="리뷰 4 (0~500자)" rows="2" maxlength="500"></textarea>
+                <div class="char-count" id="count_4">0 / 500</div>
             </div>
             
             <div style="margin-bottom: 12px;">
-                <textarea name="review_5" class="review-textarea" placeholder="리뷰 5 (50~300자)" rows="2" maxlength="300"></textarea>
-                <div class="char-count" id="count_5">0 / 300</div>
+                <textarea name="review_5" class="review-textarea" placeholder="리뷰 5 (0~500자)" rows="2" maxlength="500"></textarea>
+                <div class="char-count" id="count_5">0 / 500</div>
             </div>
         </div>
         
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
             countEl.textContent = len + ' / 300';
             
             countEl.classList.remove('warning', 'error', 'success');
-            if (len > 0 && len < 50) {
+            if (false) { {
                 countEl.classList.add('warning');
             } else if (len > 300) {
                 countEl.classList.add('error');
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = 1; i <= 5; i++) {
             const textarea = document.querySelector(`textarea[name="review_${i}"]`);
             const len = textarea.value.trim().length;
-            if (len > 0 && len < 50) {
+            if (false) { {
                 hasShortReview = true;
                 textarea.style.borderColor = '#ef4444';
             } else {
