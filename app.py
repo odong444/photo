@@ -303,7 +303,12 @@ def admin_project_detail(project_id):
             uploaders[photo.uploader_name] = []
         uploaders[photo.uploader_name].append(photo)
     
-    return render_template('admin_project_detail.html', project=project, uploaders=uploaders)
+    return render_template('admin_project_detail.html', 
+                       project=project, 
+                       uploaders=uploaders,
+                       s3_bucket=S3_BUCKET,
+                       s3_region=os.environ.get('AWS_REGION', 'ap-northeast-2'))
+
 
 @app.route('/admin/photo/<int:photo_id>/download')
 @admin_required
