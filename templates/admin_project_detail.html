@@ -34,7 +34,7 @@
     
     <!-- 선택 항목 액션 바 -->
     <div id="selectionBar" style="display: none; position: sticky; top: 0; background: var(--primary); color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; z-index: 100;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span><strong id="selectedCount">0</strong>개 선택됨</span>
             <div style="display: flex; gap: 8px;">
                 <button onclick="downloadSelected()" class="btn btn-sm" style="background: white; color: var(--primary);">
@@ -56,15 +56,17 @@
             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
             <span style="font-size: 0.875rem; color: var(--gray-600);">전체 선택</span>
         </label>
-        <span style="font-size: 0.875rem; color: var(--gray-500);">사진을 클릭하면 미리보기</span>
+        <span style="font-size: 0.875rem; color: var(--gray-500);">사진 클릭 → 미리보기</span>
     </div>
     
     {% for uploader_name, photos in uploaders.items() %}
-        <div class="uploader-section">
-            <div class="uploader-header">
-                <div>
+        <div class="uploader-section" data-uploader="{{ uploader_name }}">
+            <div class="uploader-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f3f4f6; border-radius: 8px 8px 0 0; margin-top: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <!-- 업로더별 전체선택 -->
+                    <input type="checkbox" class="uploader-select-all" data-uploader="{{ uploader_name }}" onchange="toggleUploaderSelectAll('{{ uploader_name }}')">
                     <span class="uploader-name">👤 {{ uploader_name }}</span>
-                    <span class="uploader-count">{{ photos|length }}장</span>
+                    <span class="uploader-count" style="color: var(--gray-500);">{{ photos|length }}장</span>
                 </div>
                 <a href="{{ url_for('admin_uploader_download', project_id=project.id, uploader_name=uploader_name) }}" 
                    class="btn btn-outline btn-sm">
@@ -73,11 +75,11 @@
             </div>
             
             <!-- 썸네일 그리드 -->
-            <div class="photo-grid">
+            <div class="photo-grid" data-uploader="{{ uploader_name }}">
                 {% for photo in photos %}
-                    <div class="photo-card {{ 'downloaded' if photo.is_downloaded else '' }}" data-photo-id="{{ photo.id }}">
+                    <div class="photo-card {{ 'downloaded' if photo.is_downloaded else '' }}" data-photo-id="{{ photo.id }}" data-uploader="{{ uploader_name }}">
                         <div class="photo-checkbox">
-                            <input type="checkbox" class="photo-select" value="{{ photo.id }}" onchange="updateSelection()">
+                            <input type="checkbox" class="photo-select" value="{{ photo.id }}" data-uploader="{{ uploader_name }}" onchange="updateSelection()">
                         </div>
                         <div class="photo-thumb" onclick="openPreview('{{ photo.id }}', '{{ photo.original_filename }}')">
                             <img src="https://{{ s3_bucket }}.s3.{{ s3_region }}.amazonaws.com/{{ photo.filename }}" 
@@ -89,7 +91,7 @@
                         </div>
                         <div class="photo-info">
                             <p class="photo-name" title="{{ photo.original_filename }}">{{ photo.original_filename }}</p>
-                            <p class="photo-meta">{{ photo.file_size_display }} · {{ photo.uploaded_at.strftime('%m/%d %H:%M') }}</p>
+                            <p class="photo-meta">{{ photo.uploaded_at.strftime('%m/%d %H:%M') }}</p>
                         </div>
                         <div class="photo-actions">
                             <a href="{{ url_for('admin_photo_download', photo_id=photo.id) }}" class="btn btn-primary btn-sm">📥</a>
@@ -125,21 +127,34 @@
 <style>
 .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
-    margin-bottom: 16px;
+    padding: 12px;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #e5e7eb;
+    border-top: none;
 }
 
 .photo-card {
-    background: white;
+    background: #f9fafb;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     position: relative;
+    transition: all 0.2s;
+}
+
+.photo-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .photo-card.downloaded {
     border: 2px solid var(--success);
+}
+
+.photo-card.selected {
+    outline: 3px solid var(--primary);
+    outline-offset: -3px;
 }
 
 .photo-checkbox {
@@ -153,6 +168,7 @@
     width: 20px;
     height: 20px;
     cursor: pointer;
+    accent-color: var(--primary);
 }
 
 .photo-thumb {
@@ -160,7 +176,7 @@
     overflow: hidden;
     cursor: pointer;
     position: relative;
-    background: #f3f4f6;
+    background: #e5e7eb;
 }
 
 .photo-thumb img {
@@ -187,6 +203,7 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
+    font-weight: bold;
 }
 
 .photo-info {
@@ -194,7 +211,7 @@
 }
 
 .photo-name {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -216,7 +233,7 @@
 .photo-actions .btn {
     flex: 1;
     padding: 6px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 /* 모달 */
@@ -260,9 +277,11 @@
     cursor: pointer;
 }
 
-/* 선택 상태 */
-.photo-card.selected {
-    outline: 3px solid var(--primary);
+.uploader-select-all {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
 }
 </style>
 
@@ -279,6 +298,23 @@ function updateSelection() {
         cb.closest('.photo-card').classList.remove('selected');
     });
     
+    // 업로더별 전체선택 체크박스 상태 업데이트
+    document.querySelectorAll('.uploader-select-all').forEach(uploaderCb => {
+        const uploader = uploaderCb.dataset.uploader;
+        const allInUploader = document.querySelectorAll(`.photo-select[data-uploader="${uploader}"]`);
+        const checkedInUploader = document.querySelectorAll(`.photo-select[data-uploader="${uploader}"]:checked`);
+        uploaderCb.checked = allInUploader.length > 0 && allInUploader.length === checkedInUploader.length;
+        uploaderCb.indeterminate = checkedInUploader.length > 0 && checkedInUploader.length < allInUploader.length;
+    });
+    
+    // 전체 선택 체크박스 상태 업데이트
+    const allPhotos = document.querySelectorAll('.photo-select');
+    const checkedPhotos = document.querySelectorAll('.photo-select:checked');
+    const selectAllCb = document.getElementById('selectAll');
+    selectAllCb.checked = allPhotos.length > 0 && allPhotos.length === checkedPhotos.length;
+    selectAllCb.indeterminate = checkedPhotos.length > 0 && checkedPhotos.length < allPhotos.length;
+    
+    // 선택 바 표시
     const bar = document.getElementById('selectionBar');
     const count = document.getElementById('selectedCount');
     
@@ -295,11 +331,27 @@ function toggleSelectAll() {
     document.querySelectorAll('.photo-select').forEach(cb => {
         cb.checked = selectAll;
     });
+    document.querySelectorAll('.uploader-select-all').forEach(cb => {
+        cb.checked = selectAll;
+    });
+    updateSelection();
+}
+
+function toggleUploaderSelectAll(uploader) {
+    const uploaderCb = document.querySelector(`.uploader-select-all[data-uploader="${uploader}"]`);
+    const isChecked = uploaderCb.checked;
+    
+    document.querySelectorAll(`.photo-select[data-uploader="${uploader}"]`).forEach(cb => {
+        cb.checked = isChecked;
+    });
     updateSelection();
 }
 
 function clearSelection() {
     document.querySelectorAll('.photo-select').forEach(cb => {
+        cb.checked = false;
+    });
+    document.querySelectorAll('.uploader-select-all').forEach(cb => {
         cb.checked = false;
     });
     document.getElementById('selectAll').checked = false;
