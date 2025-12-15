@@ -91,80 +91,91 @@ def index():
 
 @app.route('/upload/<int:project_id>', methods=['GET', 'POST'])
 def upload(project_id):
-    """사진 업로드 페이지"""
     project = Project.query.get_or_404(project_id)
-    
-    if not project.is_active:
-        flash('이 프로젝트는 현재 업로드가 비활성화되어 있습니다.', 'error')
-        return redirect(url_for('index'))
     
     if request.method == 'POST':
         uploader_name = request.form.get('uploader_name', '').strip()
-        files = request.files.getlist('photos')
         
         if not uploader_name:
-            flash('업로더 이름을 입력해주세요.', 'error')
-            return render_template('upload.html', project=project)
+            flash('업로더 이름을 입력해주세요.')
+            return redirect(url_for('upload', project_id=project_id))
         
-        if not files or all(f.filename == '' for f in files):
-            flash('파일을 선택해주세요.', 'error')
-            return render_template('upload.html', project=project)
-        
-        s3 = get_s3_client()
         uploaded_count = 0
+        review_count = 0
         
+        # 1. 사진 업로드 처리 (기존 로직)
+        files = request.files.getlist('photos')
         for file in files:
-            if file and file.filename and allowed_file(file.filename):
-                original_filename = secure_filename(file.filename)
-                # 고유한 파일명 생성
-                ext = original_filename.rsplit('.', 1)[1].lower()
-                unique_filename = f"{uuid.uuid4().hex}.{ext}"
-                s3_key = f"{project.folder_name}/{uploader_name}/{unique_filename}"
-                
-                try:
-                    # 파일 크기 확인
-                    file.seek(0, 2)
-                    file_size = file.tell()
-                    file.seek(0)
+            if file and file.filename:
+                if allowed_file(file.filename):
+                    # 파일 처리
+                    filename = secure_filename(file.filename)
+                    unique_filename = f"{uuid.uuid4().hex}_{filename}"
+                    s3_key = f"{project.name}/{uploader_name}/{unique_filename}"
                     
-                    # S3 업로드
-                    s3.upload_fileobj(
-                        file,
-                        app.config['S3_BUCKET_NAME'],
-                        s3_key,
-                        ExtraArgs={'ContentType': file.content_type}
-                    )
-                    
-                    # DB 저장
-                    photo = Photo(
-                        project_id=project.id,
-                        filename=s3_key,
-                        original_filename=original_filename,
-                        uploader_name=uploader_name,
-                        file_size=file_size
-                    )
-                    db.session.add(photo)
-                    uploaded_count += 1
-                    
-                except ClientError as e:
-                    flash(f'업로드 오류: {str(e)}', 'error')
-                    continue
+                    try:
+                        # S3 업로드
+                        file.seek(0)
+                        s3_client.upload_fileobj(
+                            file,
+                            app.config['S3_BUCKET'],
+                            s3_key,
+                            ExtraArgs={'ContentType': file.content_type}
+                        )
+                        
+                        # DB 저장
+                        photo = Photo(
+                            filename=unique_filename,
+                            original_filename=file.filename,
+                            s3_key=s3_key,
+                            file_size=file.content_length or 0,
+                            uploader_name=uploader_name,
+                            project_id=project.id
+                        )
+                        db.session.add(photo)
+                        uploaded_count += 1
+                    except Exception as e:
+                        print(f"Upload error: {e}")
+                        continue
         
+        # 2. 리뷰 텍스트 처리 (새로 추가)
+        reviews = []
+        for i in range(1, 6):
+            review = request.form.get(f'review_{i}', '').strip()
+            if review and len(review) >= 50:  # 50자 이상만 저장
+                reviews.append(review)
+        
+        if reviews:
+            success, message = save_reviews_to_sheets(uploader_name, project.name, reviews)
+            if success:
+                review_count = len(reviews)
+            else:
+                print(f"리뷰 저장 실패: {message}")
+        
+        # 3. 커밋 및 결과
         db.session.commit()
         
-        if uploaded_count > 0:
-            flash(f'{uploaded_count}개의 사진이 업로드되었습니다!', 'success')
-        
-        return redirect(url_for('upload_complete', project_id=project.id, count=uploaded_count))
+        if uploaded_count > 0 or review_count > 0:
+            return redirect(url_for('upload_complete', project_id=project_id, 
+                                    photo_count=uploaded_count, review_count=review_count))
+        else:
+            flash('업로드할 사진을 선택하거나 리뷰를 작성해주세요.')
+            return redirect(url_for('upload', project_id=project_id))
     
     return render_template('upload.html', project=project)
 
+
+# upload_complete 함수도 수정 필요
 @app.route('/upload/<int:project_id>/complete')
 def upload_complete(project_id):
-    """업로드 완료 페이지"""
     project = Project.query.get_or_404(project_id)
-    count = request.args.get('count', 0, type=int)
-    return render_template('upload_complete.html', project=project, count=count)
+    photo_count = request.args.get('photo_count', 0, type=int)
+    review_count = request.args.get('review_count', 0, type=int)
+    # 기존 count 파라미터도 호환
+    if photo_count == 0:
+        photo_count = request.args.get('count', 0, type=int)
+    return render_template('upload_complete.html', project=project, 
+                           photo_count=photo_count, review_count=review_count)
 
 # ==================== 관리자 페이지 ====================
 
