@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block title %}{{ project.name }} - 사진 관리{% endblock %}
 
 {% block content %}
@@ -26,10 +25,38 @@
 </div>
 
 {% if project.photos %}
+    <!-- 전체 다운로드 -->
     <div style="margin-bottom: 16px;">
         <a href="{{ url_for('admin_project_download_all', project_id=project.id) }}" class="btn btn-success btn-block">
             📥 전체 다운로드 (ZIP)
         </a>
+    </div>
+    
+    <!-- 선택 항목 액션 바 -->
+    <div id="selectionBar" style="display: none; position: sticky; top: 0; background: var(--primary); color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; z-index: 100;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span><strong id="selectedCount">0</strong>개 선택됨</span>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="downloadSelected()" class="btn btn-sm" style="background: white; color: var(--primary);">
+                    📥 선택 다운로드
+                </button>
+                <button onclick="deleteSelected()" class="btn btn-sm" style="background: #ef4444; color: white;">
+                    🗑 선택 삭제
+                </button>
+                <button onclick="clearSelection()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white;">
+                    ✕ 취소
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 전체 선택 -->
+    <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+            <span style="font-size: 0.875rem; color: var(--gray-600);">전체 선택</span>
+        </label>
+        <span style="font-size: 0.875rem; color: var(--gray-500);">사진을 클릭하면 미리보기</span>
     </div>
     
     {% for uploader_name, photos in uploaders.items() %}
@@ -45,22 +72,27 @@
                 </a>
             </div>
             
-            <div class="photo-list">
+            <!-- 썸네일 그리드 -->
+            <div class="photo-grid">
                 {% for photo in photos %}
-                    <div class="photo-item {{ 'downloaded' if photo.is_downloaded else '' }}" style="display: flex; align-items: center; padding: 12px; background: var(--gray-50); border-radius: 8px; margin-bottom: 8px;">
-                        <div style="flex: 1;">
-                            <p style="font-weight: 500; margin-bottom: 4px;">{{ photo.original_filename }}</p>
-                            <p style="font-size: 0.75rem; color: var(--gray-500);">
-                                {{ photo.file_size_display }} · {{ photo.uploaded_at.strftime('%m/%d %H:%M') }}
-                                {% if photo.is_downloaded %}
-                                    <span style="color: var(--success);">✓ 다운로드됨</span>
-                                {% endif %}
-                            </p>
+                    <div class="photo-card {{ 'downloaded' if photo.is_downloaded else '' }}" data-photo-id="{{ photo.id }}">
+                        <div class="photo-checkbox">
+                            <input type="checkbox" class="photo-select" value="{{ photo.id }}" onchange="updateSelection()">
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <a href="{{ url_for('admin_photo_download', photo_id=photo.id) }}" class="btn btn-primary btn-sm">
-                                📥
-                            </a>
+                        <div class="photo-thumb" onclick="openPreview('{{ photo.id }}', '{{ photo.original_filename }}')">
+                            <img src="https://{{ s3_bucket }}.s3.{{ s3_region }}.amazonaws.com/{{ photo.filename }}" 
+                                 alt="{{ photo.original_filename }}"
+                                 loading="lazy">
+                            {% if photo.is_downloaded %}
+                                <div class="downloaded-badge">✓</div>
+                            {% endif %}
+                        </div>
+                        <div class="photo-info">
+                            <p class="photo-name" title="{{ photo.original_filename }}">{{ photo.original_filename }}</p>
+                            <p class="photo-meta">{{ photo.file_size_display }} · {{ photo.uploaded_at.strftime('%m/%d %H:%M') }}</p>
+                        </div>
+                        <div class="photo-actions">
+                            <a href="{{ url_for('admin_photo_download', photo_id=photo.id) }}" class="btn btn-primary btn-sm">📥</a>
                             <form action="{{ url_for('admin_photo_delete', photo_id=photo.id) }}" method="POST" style="display: inline;"
                                   onsubmit="return confirm('삭제하시겠습니까?');">
                                 <button type="submit" class="btn btn-danger btn-sm">🗑</button>
@@ -77,4 +109,248 @@
         <p>아직 업로드된 사진이 없습니다.</p>
     </div>
 {% endif %}
+
+<!-- 미리보기 모달 -->
+<div id="previewModal" class="modal" onclick="closePreview(event)">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closePreview(event)">×</button>
+        <img id="previewImage" src="" alt="미리보기">
+        <p id="previewName" style="text-align: center; margin-top: 12px; color: white;"></p>
+        <div style="text-align: center; margin-top: 12px;">
+            <a id="previewDownload" href="" class="btn btn-primary">📥 다운로드</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.photo-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.photo-card.downloaded {
+    border: 2px solid var(--success);
+}
+
+.photo-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}
+
+.photo-checkbox input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.photo-thumb {
+    aspect-ratio: 1;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    background: #f3f4f6;
+}
+
+.photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s;
+}
+
+.photo-thumb:hover img {
+    transform: scale(1.05);
+}
+
+.downloaded-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: var(--success);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.photo-info {
+    padding: 8px;
+}
+
+.photo-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.photo-meta {
+    font-size: 0.65rem;
+    color: var(--gray-500);
+}
+
+.photo-actions {
+    display: flex;
+    gap: 4px;
+    padding: 0 8px 8px;
+}
+
+.photo-actions .btn {
+    flex: 1;
+    padding: 6px;
+    font-size: 0.75rem;
+}
+
+/* 모달 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    position: relative;
+}
+
+.modal-content img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 8px;
+}
+
+.modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+/* 선택 상태 */
+.photo-card.selected {
+    outline: 3px solid var(--primary);
+}
+</style>
+
+<script>
+let selectedPhotos = new Set();
+
+function updateSelection() {
+    selectedPhotos.clear();
+    document.querySelectorAll('.photo-select:checked').forEach(cb => {
+        selectedPhotos.add(cb.value);
+        cb.closest('.photo-card').classList.add('selected');
+    });
+    document.querySelectorAll('.photo-select:not(:checked)').forEach(cb => {
+        cb.closest('.photo-card').classList.remove('selected');
+    });
+    
+    const bar = document.getElementById('selectionBar');
+    const count = document.getElementById('selectedCount');
+    
+    if (selectedPhotos.size > 0) {
+        bar.style.display = 'block';
+        count.textContent = selectedPhotos.size;
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.photo-select').forEach(cb => {
+        cb.checked = selectAll;
+    });
+    updateSelection();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.photo-select').forEach(cb => {
+        cb.checked = false;
+    });
+    document.getElementById('selectAll').checked = false;
+    updateSelection();
+}
+
+function downloadSelected() {
+    if (selectedPhotos.size === 0) return;
+    
+    const ids = Array.from(selectedPhotos).join(',');
+    window.location.href = '/admin/photos/download-selected?ids=' + ids;
+}
+
+function deleteSelected() {
+    if (selectedPhotos.size === 0) return;
+    
+    if (!confirm(selectedPhotos.size + '개의 사진을 삭제하시겠습니까?')) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/photos/delete-selected';
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'ids';
+    input.value = Array.from(selectedPhotos).join(',');
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function openPreview(photoId, filename) {
+    const img = document.querySelector(`[data-photo-id="${photoId}"] .photo-thumb img`);
+    document.getElementById('previewImage').src = img.src;
+    document.getElementById('previewName').textContent = filename;
+    document.getElementById('previewDownload').href = '/admin/photo/' + photoId + '/download';
+    document.getElementById('previewModal').classList.add('active');
+}
+
+function closePreview(event) {
+    if (event.target.classList.contains('modal') || event.target.classList.contains('modal-close')) {
+        document.getElementById('previewModal').classList.remove('active');
+    }
+}
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('previewModal').classList.remove('active');
+    }
+});
+</script>
 {% endblock %}
