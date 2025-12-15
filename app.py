@@ -127,7 +127,7 @@ def upload(project_id):
                         file.seek(0)
                         s3_client.upload_fileobj(
                             file,
-                            app.config['S3_BUCKET'],
+                            s3_BUCKET,
                             s3_key,
                             ExtraArgs={'ContentType': file.content_type}
                         )
