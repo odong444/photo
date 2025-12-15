@@ -18,13 +18,14 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 
-# S3 클라이언트 생성
 s3_client = boto3.client(
     's3',
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
     region_name=os.environ.get('AWS_REGION')
 )
+
+S3_BUCKET = os.environ.get('S3_BUCKET_NAME')  
 
 GOOGLE_SHEETS_ID = '1eAuotbbl7bbj8N8rCr4lbgE-g9Ja_l66ZUk_N9UVtEI'
 
