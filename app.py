@@ -18,8 +18,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 
-s3_client = boto3.client(
-    's3',
+S3_client = boto3.client(
+    'S3',
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
     region_name=os.environ.get('AWS_REGION')
@@ -73,9 +73,9 @@ def save_reviews_to_sheets(uploader_name, project_name, reviews):
         return False, str(e)
 
 # S3 클라이언트
-def get_s3_client():
+def get_S3_client():
     return boto3.client(
-        's3',
+        'S3',
         aws_access_key_id=app.config['AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=app.config['AWS_SECRET_ACCESS_KEY'],
         region_name=app.config['AWS_REGION']
@@ -120,15 +120,15 @@ def upload(project_id):
                     # 파일 처리
                     filename = secure_filename(file.filename)
                     unique_filename = f"{uuid.uuid4().hex}_{filename}"
-                    s3_key = f"{project.name}/{uploader_name}/{unique_filename}"
+                    S3_key = f"{project.name}/{uploader_name}/{unique_filename}"
                     
                     try:
                         # S3 업로드
                         file.seek(0)
-                        s3_client.upload_fileobj(
+                        S3_client.upload_fileobj(
                             file,
-                            s3_BUCKET,
-                            s3_key,
+                            S3_BUCKET,
+                            S3_key,
                             ExtraArgs={'ContentType': file.content_type}
                         )
                         
@@ -136,7 +136,7 @@ def upload(project_id):
                         photo = Photo(
                             filename=unique_filename,
                             original_filename=file.filename,
-                            s3_key=s3_key,
+                            S3_key=S3_key,
                             file_size=file.content_length or 0,
                             uploader_name=uploader_name,
                             project_id=project.id
@@ -278,10 +278,10 @@ def admin_project_delete(project_id):
     project = Project.query.get_or_404(project_id)
     
     # S3에서 파일들 삭제
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     for photo in project.photos:
         try:
-            s3.delete_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.s3_key)
+            S3.delete_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.S3_key)
         except:
             pass
     
@@ -312,9 +312,9 @@ def admin_photo_download(photo_id):
     """개별 사진 다운로드"""
     photo = Photo.query.get_or_404(photo_id)
     
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     try:
-        response = s3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.s3_key)
+        response = S3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.S3_key)
         
         # 다운로드 표시
         photo.is_downloaded = True
@@ -336,11 +336,11 @@ def admin_photo_preview(photo_id):
     """사진 미리보기 URL (presigned)"""
     photo = Photo.query.get_or_404(photo_id)
     
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     try:
-        url = s3.generate_presigned_url(
+        url = S3.generate_presigned_url(
             'get_object',
-            Params={'Bucket': app.config['S3_BUCKET_NAME'], 'Key': photo.s3_key},
+            Params={'Bucket': app.config['S3_BUCKET_NAME'], 'Key': photo.S3_key},
             ExpiresIn=3600
         )
         return jsonify({'url': url})
@@ -357,14 +357,14 @@ def admin_project_download_all(project_id):
         flash('다운로드할 사진이 없습니다.', 'error')
         return redirect(url_for('admin_project_detail', project_id=project_id))
     
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     
     # ZIP 파일 생성
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for photo in project.photos:
             try:
-                response = s3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.s3_key)
+                response = S3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.S3_key)
                 file_data = response['Body'].read()
                 
                 # 업로더별 폴더로 구분
@@ -399,13 +399,13 @@ def admin_uploader_download(project_id, uploader_name):
         flash('다운로드할 사진이 없습니다.', 'error')
         return redirect(url_for('admin_project_detail', project_id=project_id))
     
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for photo in photos:
             try:
-                response = s3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.s3_key)
+                response = S3.get_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.S3_key)
                 file_data = response['Body'].read()
                 zip_file.writestr(photo.original_filename, file_data)
                 
@@ -432,9 +432,9 @@ def admin_photo_delete(photo_id):
     photo = Photo.query.get_or_404(photo_id)
     project_id = photo.project_id
     
-    s3 = get_s3_client()
+    S3 = get_S3_client()
     try:
-        s3.delete_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.s3_key)
+        S3.delete_object(Bucket=app.config['S3_BUCKET_NAME'], Key=photo.S3_key)
     except:
         pass
     
