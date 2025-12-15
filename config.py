@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///photo_manager.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///photo_manager.db').replace('postgres://', 'postgresql+psycopg://')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # AWS S3 설정
