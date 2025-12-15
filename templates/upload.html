@@ -22,17 +22,13 @@
         </div>
         
         <!-- 사진 업로드 섹션 -->
-        <div class="form-group">
-            <label class="form-label">사진 선택</label>
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📷</div>
-                <p class="upload-text">터치하여 사진 선택</p>
-                <p class="upload-hint">JPG, PNG, GIF 지원</p>
-                <input type="file" name="photos" id="photoInput" 
-                       accept="image/*" multiple hidden>
-            </div>
-            <div id="previewContainer" class="preview-container"></div>
-        </div>
+        <label class="upload-area" id="uploadArea" for="photoInput">
+            <div class="upload-icon">📷</div>
+            <p class="upload-text">터치하여 사진 선택</p>
+            <p class="upload-hint">JPG, PNG, GIF 지원</p>
+            <input type="file" name="photos" id="photoInput" 
+                   accept="image/*" multiple style="display:none;">
+        </label>
         
         <!-- 리뷰 텍스트 입력 섹션 -->
         <div class="form-group" style="margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
